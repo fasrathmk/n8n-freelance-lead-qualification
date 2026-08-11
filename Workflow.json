@@ -1,0 +1,316 @@
+{
+  "name": "FreelanceQualificationWorkflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        80
+      ],
+      "id": "ff05f5f8-c757-4c88-ba48-3a4c93500adf",
+      "name": "Start Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a5dd9386-5ab5-4435-9dff-7155dd70113b",
+              "leftValue": "={{ $json.Budget }}",
+              "rightValue": 100,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "40db328e-34a7-4219-bd1d-1f376dd740b2",
+              "leftValue": "={{ $json.DeadlineDays }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -384,
+        -32
+      ],
+      "id": "af9f0535-db08-465e-a607-6d07dfaadff8",
+      "name": "Check Lead Requirments"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Your Project Request – Next Steps",
+        "emailType": "text",
+        "message": "=Hi {{ $json.clientName }},\n\nThank you for sharing the details of your {{ $json.Service }} project.  \n\nYour request meets my current budget and timeline requirements, so I would be happy to continue and move to the next stage of the project.  Please send any additional requirements, references, preferred style, colours and other relevant information. After reviewing them, I will confirm the scope, price and delivery schedule.  \n\nBest regards, \nFasrath Hussain \nNOVIQ Studio",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": []
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        -96
+      ],
+      "id": "2e7b1173-ec57-438a-8e55-4ce0bd8b5076",
+      "name": "Qualified Mail",
+      "webhookId": "50b43cc0-762b-4a1b-90d0-4c0334979a9b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bIzH3N5Hs92ixf90",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Tg0Yj6zZcEL_QlGx3KykWZxT-Elv3tyGkFQdeKkILgI",
+          "mode": "list",
+          "cachedResultName": "Client_Details",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Tg0Yj6zZcEL_QlGx3KykWZxT-Elv3tyGkFQdeKkILgI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Tg0Yj6zZcEL_QlGx3KykWZxT-Elv3tyGkFQdeKkILgI/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -576,
+        16
+      ],
+      "id": "5d4c831b-d93e-423a-8373-51a9c30eb21d",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fBpVtXCssOcBb28U",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"mailType\": \"Qualified\",\n  \"deliveryStatus\": \"Success\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        64,
+        -96
+      ],
+      "id": "ec5001a1-f7fd-4b4f-848b-77e399aea461",
+      "name": "Mark Qualified Email"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"mailType\": \"Review\",\n  \"deliveryStatus\": \"Success\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        64,
+        144
+      ],
+      "id": "0676b579-0587-456b-bc1b-4c5590f0f167",
+      "name": "Mark Review Email"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "af07ff11-4b2b-4daa-bc92-3453f649daa0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const emails = $input.all();\n\nconst qualifiedCount = emails.filter(\n  item => item.json.mailType === \"Qualified\"\n).length;\n\nconst reviewCount = emails.filter(\n  item => item.json.mailType === \"Review\"\n).length;\n\nconst totalCount = qualifiedCount + reviewCount;\n\nreturn [\n  {\n    json: {\n      message: \"Emails sent successfully!\",\n      totalEmailsSent: totalCount,\n      qualifiedEmailsSent: qualifiedCount,\n      reviewEmailsSent: reviewCount\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        128
+      ],
+      "id": "5c7c928b-e0d0-4121-9459-5380c45e0883",
+      "name": "Email Sending Summary"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Regarding Your Project Request",
+        "emailType": "text",
+        "message": "=Hi {{ $json.clientName }},  \n\nThank you for contacting me about your {{ $json.Service }} project.  \n\nUnfortunately, the current budget or deadline does not meet my standard project requirements. However, I would be happy to review the request before making a final decision.  \n\nIf you are interested, please let me know whether the budget, deadline or project scope can be adjusted. We can then discuss whether there is a suitable way to proceed.  \n\nBest regards, \nFasrath Hussain \nNOVIQ Studio",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -160,
+        128
+      ],
+      "id": "ea895212-d859-486d-9933-fb5d69bdfd9a",
+      "name": "Review Mail",
+      "webhookId": "ed6eba7a-004c-4f64-a23d-d5e5921d6227",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bIzH3N5Hs92ixf90",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Lead Requirments": {
+      "main": [
+        [
+          {
+            "node": "Qualified Mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Check Lead Requirments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qualified Mail": {
+      "main": [
+        [
+          {
+            "node": "Mark Qualified Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Qualified Email": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Review Email": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Email Sending Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Mail": {
+      "main": [
+        [
+          {
+            "node": "Mark Review Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "11a5c9a0-812a-4eb6-aba1-ebfc3cd746b8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6e01f36d5ebc5ca7eae4dbd833562729d315cdc0de23ae8cf8efae4a2474248c"
+  },
+  "nodeGroups": [],
+  "id": "8wKJFzsM07oXhxd7",
+  "tags": [
+    {
+      "name": "Beginner",
+      "id": "5AkuGx6M1XU4r6O4",
+      "updatedAt": "2026-08-11T17:09:23.356Z",
+      "createdAt": "2026-08-11T17:09:23.356Z"
+    }
+  ]
+}
